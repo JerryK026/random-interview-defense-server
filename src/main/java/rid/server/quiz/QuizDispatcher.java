@@ -1,6 +1,5 @@
 package rid.server.quiz;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import rid.server.RandomGenerator;
 
@@ -11,12 +10,11 @@ import java.util.Map;
 @Component
 public class QuizDispatcher {
 
-    @Autowired
-    private RandomGenerator random;
+    private final RandomGenerator random;
+    private Map<QuizType, Quizzes> quizzesMap = new HashMap<>();
 
-    private final Map<QuizType, Quizzes> quizzesMap = new HashMap<>();
-
-    QuizDispatcher() {
+    QuizDispatcher(RandomGenerator random) {
+        this.random = random;
         loadQuizzes();
     }
 

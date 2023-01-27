@@ -7,7 +7,7 @@ import java.util.concurrent.ThreadLocalRandom;
 @Component
 public class RandomGenerator {
 
-    private static final ThreadLocalRandom random = ThreadLocalRandom.current();
+    private final ThreadLocalRandom random = ThreadLocalRandom.current();
 
     public int getNumber(final int bound) {
         return random.nextInt(bound) + 1;

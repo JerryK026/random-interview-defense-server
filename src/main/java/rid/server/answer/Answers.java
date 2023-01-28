@@ -1,13 +1,13 @@
 package rid.server.answer;
 
-import org.springframework.core.io.DefaultResourceLoader;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import rid.server.quiz.QuizType;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Answers {
 
@@ -31,34 +31,59 @@ public class Answers {
         List<String> contents = loadAnswers(quizType.getAnswerPath());
 
         int size = contents.size();
-        for (int idx = 1; idx <= size; idx++) {
-            answers.put(idx, new Answer(idx, quizType, contents.get(idx - 1)));
+        for (int i = 0; i < size; i++) {
+            String currentContents = contents.get(i);
+            int idx = getQuizIndex(currentContents);
+            answers.put(idx, new Answer(idx, quizType, currentContents));
         }
     }
 
     private List<String> loadAnswers(String path) {
-        File[] files;
-
-        try {
-            files = new DefaultResourceLoader().getResource(path).getFile().listFiles();
-        } catch (IOException e) {
-            // 에러 메시지를 상수화하면 오히려 관리 포인트 및 복잡도가 늘어나기 때문에 예외에 메시지 직접 명시
-            // 상수화하지 않아도 어차피 상수풀에 올라감
-            throw new RuntimeException("Answer 파일 메모리에 적재 중 문제 발생", e);
-        }
+        Resource[] resources = readResourcesFromPath(path);
 
         List<String> answerStrings = new ArrayList<>();
 
-        for (File file : files) {
-            try {
-                answerStrings.add(
-                        new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8)
-                );
-            } catch (IOException e) {
-                throw new RuntimeException("Answer 파일들 Byte[]로 변환 중 문제 발생", e);
-            }
+        for (Resource resource : resources) {
+            String contents = bufferedReader2String(
+                    resource2BufferedReader(resource)
+            );
+
+            answerStrings.add(contents);
         }
 
         return answerStrings;
+    }
+
+    private String bufferedReader2String(BufferedReader br) {
+        return br.lines().collect(Collectors.joining("\n"));
+    }
+
+    private static BufferedReader resource2BufferedReader(Resource resource) {
+        BufferedReader br;
+        try {
+            br = new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            throw new RuntimeException("Resource에서 BufferedReader로 파싱하는 도중 에러가 발생했습니다", e);
+        }
+        return br;
+    }
+
+    private Resource[] readResourcesFromPath(String path) {
+        Resource[] resources;
+        try {
+            resources = new PathMatchingResourcePatternResolver().getResources(path + "*");
+        } catch (IOException e) {
+            throw new RuntimeException("패턴에 일치하는 답변을 찾는 도중 에러가 발생했습니다", e);
+        }
+        return resources;
+    }
+
+    private int getQuizIndex(String contents) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 1; Character.isDigit(contents.charAt(i)); i++) {
+            sb.append(contents.charAt(i));
+        }
+
+        return Integer.parseInt(sb.toString());
     }
 }
